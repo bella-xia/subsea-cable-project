@@ -12,10 +12,11 @@ def format_ip(ip_addr : str) -> tuple[int]:
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', type=str, default='outputs/traceroute_le0_ip.json')
+    parser.add_argument('--input_dir', type=str, required=True)
     parser.add_argument('--threshold', type=int, default=-1)
     parser.add_argument('--unit', type=str, default='ip_address')
     parser.add_argument('--target', type=str, default='node')
+    parser.add_argument('--output_dir', type=str, required=True)
 
     args = parser.parse_args()
 
@@ -39,10 +40,11 @@ if __name__ == '__main__':
         presence_df = (pivot_df > 0).astype(int)
         
         plt.figure(figsize=(15 if args.target == 'node' else 20, 10 if args.target == 'node' else 15))
-        sns.heatmap(presence_df, cmap='Blues', cbar=False, linewidth=0.5, linecolor='lightgray')    
-        plt.yticks(rotation=0)
+        ax = sns.heatmap(presence_df, cmap='Blues', cbar=False, linewidth=0.5, linecolor='lightgray')    
+        ax.set_yticks(np.arange(len(presence_df.index)) + 0.5) # Positions of ticks (center of cells)
+        ax.set_yticklabels(presence_df.index.tolist(), rotation=0, fontsize=10)
         plt.xticks(rotation=45, ha='right')
-        plt.savefig(f'images/{args.unit}_presence_heatmap.png')
+        plt.savefig(f'{args.output_dir}/{args.unit}_presence_heatmap_{args.target}.png')
 
     else:
         filtered_df = df[df['count'] > args.threshold]    
@@ -50,9 +52,8 @@ if __name__ == '__main__':
 
         plt.figure(figsize=(15 if args.target == 'node' else 20, 10 if args.target == 'node' else 15))
         ax = sns.heatmap(filtered_pivot_df, cmap='Blues', cbar=True, linewidth=0.5, linecolor='lightgray')    
-        # plt.yticks(rotation=0, fontsize=3)
         ax.set_yticks(np.arange(len(filtered_pivot_df.index)) + 0.5) # Positions of ticks (center of cells)
         ax.set_yticklabels(filtered_pivot_df.index.tolist(), rotation=0, fontsize=10)
         plt.xticks(rotation=45, ha='right')
-        plt.savefig(f'images/{args.unit}_threshold_{args.threshold}_{args.target}_heatmap.png')
+        plt.savefig(f'{args.output_dir}/{args.unit}_threshold_{args.threshold}_{args.target}_heatmap.png')
 

@@ -20,10 +20,11 @@ def get_city_from_ip(ip_address, database_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, default="data/all-meta-from-kenya.jsonl.gz")
+    parser.add_argument("--input_dir", type=str, required=True)
     parser.add_argument("--geoloc_db", type=str, default="data/GeoLite2-Country.mmdb")
     parser.add_argument("--region_db", type=str, default="data/iso-3166-countries-with-regional-codes.csv")
     parser.add_argument("--destination", type=str, default=None)
+    parser.add_argument('--output_prefix', type=str, required=True)
 
     args = parser.parse_args()
     
@@ -36,7 +37,9 @@ if __name__ == '__main__':
     aggre_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {})))
 
     with gzip.open(args.input_dir, 'rt', encoding='utf-8') as f:
+        counter = 0
         for line in f:
+            counter += 1
             partial_dict = json.loads(line)
             for key, value in partial_dict.items():
                 break
@@ -72,14 +75,17 @@ if __name__ == '__main__':
                     for k2, v2 in v1.items():
                         aggre_dict[k1][k2][ident] = v2
                 # break
+            
+            # if counter == 10:
+            #     break
     if args.destination: 
         sorted_aggre_data = dict(sorted(aggre_data.items(), key=lambda item: item[0]))
-        with gzip.open(f"data/{args.destination}-probe-from-kenya.jsonl.gz",'wt', encoding='utf-8') as f:
+        with gzip.open(f"data/{args.output_prefix}-probes.jsonl.gz",'wt', encoding='utf-8') as f:
             for key, value in sorted_aggre_data.items():
                 json_line = json.dumps({key: value})
                 f.write(json_line + '\n')
     else:
-        with open('data/destination-probes-from-kenya.json', 'w') as f:
+        with open('data/destination-probes-{args.output_prefix}', 'w') as f:
             json.dump(aggre_dict, f, indent=4)
 
 

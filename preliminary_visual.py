@@ -6,8 +6,9 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, default="data/egypt-probe-from-kenya.jsonl.gz")
+    parser.add_argument("--input_dir", type=str, required=True)
     parser.add_argument("--unit", type=str, default="cycle")
+    parser.add_argument('--output_dir', type=str, required=True)
 
     args = parser.parse_args()
 
@@ -53,19 +54,30 @@ if __name__ == '__main__':
 
     # graph 1: on stop reasons
     fig, ax = plt.subplots(figsize=(15, 10))
-    keys = list(counter_aggre.keys())
-    categories = list({cat for counts in counter_aggre.values() for cat in counts if cat != 'gaplimit'}) # TODO: ignoring gap limit for now because it takes up too much samples
-    bottom = [0] * len(keys)
-    for cat in categories:
-        values = [counter_aggre[key].get(cat, 0) for key in keys]
-        ax.bar(keys, values, bottom=bottom, label=cat)
+    counter_keys = list(counter_aggre.keys())
+    counter_cats = sorted({cat for counts in counter_aggre.values() for cat in counts if cat != 'gaplimit'})
+
+    color_map = {
+    'noreason': 'tab:gray',
+    'completed': 'tab:green',
+    'loop': 'tab:orange',
+    'error': 'tab:red',
+    'unreach': 'tab:blue',
+    'gss': 'tab:yellow',
+    'icmp': 'tab:pink',
+    'hoplimit': 'tab:purple',
+    }
+    bottom = [0] * len(counter_keys)
+    for cat in counter_cats:
+        values = [counter_aggre[key].get(cat, 0) for key in counter_keys]
+        ax.bar(counter_keys, values, bottom=bottom, label=cat, color=color_map[cat])
         bottom = [b + v for b, v, in zip(bottom, values)]      
     
     ax.set_ylabel('probe counts')
     ax.set_xlabel('Time Duration')
     ax.tick_params(axis='x', labelrotation=30, labelsize=8)
     ax.legend(title='stop reason')
-    fig.savefig(f'images/per-{args.unit}-stop-hop-reason-histogram.png')
+    fig.savefig(f'{args.output_dir}/per-{args.unit}-stop-hop-reason-histogram.png')
 
 
     # graph 2: all completed trip time statistics
@@ -102,4 +114,4 @@ if __name__ == '__main__':
     axes[1].set_xticklabels(keys)
     axes[1].tick_params(axis='x', labelrotation=30, labelsize=8)
 
-    plt.savefig(f"images/per-{args.unit}-traceroute-preliminary-stat.png")
+    plt.savefig(f"{args.output_dir}/per-{args.unit}-traceroute-preliminary-stat.png")

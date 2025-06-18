@@ -89,7 +89,7 @@ def extract_path(data : dict[any], mode : str) -> list[str]:
     return asns
 
 
-def process_node_graph(G, high_transit_nodes):
+def process_node_graph(G, high_transit_nodes, file_prefix):
     
     nodes_to_display = set(high_transit_nodes)
     for node in high_transit_nodes:
@@ -107,22 +107,22 @@ def process_node_graph(G, high_transit_nodes):
     nx.draw_networkx_labels(G, pos, labels={n:n for n in sub_G.nodes}, font_size=5)
 
     plt.title(f"{label} Traceroute Transit Graph with Node >={args.threshold} Highlighted")
-    plt.savefig(f'images/{label}-traceroute-high-transit-node-bound{args.threshold}.png')
+    plt.savefig(f'images/{file_prefix}/{label}-traceroute-high-transit-node-bound{args.threshold}.png')
 
 
-def process_edge_graph(G, high_utilized_edges):
+def process_edge_graph(G, high_utilized_edges, file_prefix):
     # TODO
     raise Exception("unimplemented")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, default="data/egypt-probe-from-kenya.jsonl.gz")
+    parser.add_argument("--input_dir", type=str, required=True)
     parser.add_argument("--threshold", type=int, default=0)
     parser.add_argument("--mode", type=str, default="ip") # node frequency or edge frequency
     parser.add_argument("--out_format", type=str, default="json") # choose whether use json to parse data or output images directly
     parser.add_argument("--target", type=str, default="node") # check whether we are looking at node (ip / asn) or connection (tuple[ip, ip])
-
+    parser.add_argument('--output_prefix', type=str, required=True)
     args = parser.parse_args()
     
     date_pattern = re.compile(r'(c\d+)\.\d{2}(\d{2})(\d{2})(\d{2})\.warts.gz')
@@ -149,24 +149,25 @@ if __name__ == '__main__':
             elif prev_label != label:
                 
                 if args.target == 'node':
-                    high_transit_nodes = [node for node in G.nodes() if G.nodes[node]['transit'] > args.threshold]
+                    node_transit_tuple = [(node, G.nodes[node]['transit']) for node in G.nodes]
+                    high_transit_nodes = sorted(node_transit_tuple, key=lambda x : x[1], reverse=True)[:args.threshold] 
                     if args.out_format == 'json':
-                        transit_node_with_degrees = [{'node': node, 'count': G.nodes[node]['transit']} for node in high_transit_nodes]
+                        transit_node_with_degrees = [{'node': node, 'count': transit} for (node, transit) in high_transit_nodes]
                         json_dict[label] = transit_node_with_degrees
 
                     elif args.out_format == 'image':
-                        process_node_graph(G, high_transit_nodes)
+                        process_node_graph(G, high_transit_nodes, args.output_prefix)
                 elif args.target == 'edge':
                     # TODO: process connection
-
-                    high_utilized_edges = [edge for edge in G.edges() if G.edges[edge]['weight'] > args.threshold]
+                    edge_weight_tuple = [(edge, G.edges[edge]['weight']) for edge in G.edges()]
+                    high_utilized_edges = sorted(edge_weight_tuple, key = lambda x : x[1], reverse=True)[:args.threshold]
                     
                     if args.out_format == 'json':
-                        transit_edge_with_weights = [{'node': f'{edge[0]}->{edge[1]}', 'count': G.edges[edge]['weight']} for edge in high_utilized_edges]
+                        transit_edge_with_weights = [{'node': f'{edge[0]}->{edge[1]}', 'count': weight} for (edge, weight) in high_utilized_edges]
                         json_dict[label] = transit_edge_with_weights
 
                     elif args.output_format == 'image':
-                        process_edge_graph(G, high_utilized_tuples)
+                        process_edge_graph(G, high_utilized_tuples, args.output_prefix)
 
                 G.clear()
                 unique_probes.clear()
@@ -198,5 +199,5 @@ if __name__ == '__main__':
                     prev_str = ip_addr
 
         if args.out_format == 'json':
-            with open(f'traceroute_le{args.threshold}_{args.mode}_for_{args.target}.json', 'w') as f:
+            with open(f'data/{args.output_prefix}-traceroute-le{args.threshold}-{args.mode}-for-{args.target}.json', 'w') as f:
                 json.dump(json_dict, f, indent=4)

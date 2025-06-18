@@ -94,3 +94,19 @@ subsea cable system
     disruptions, leading to lost or significantly delayed traffic between Europe, Africa,
     and Asia [TODO: cite the news]. This period is the focus of the current exploratory
     study.
+
+    The project uses extracted data from ISO 3166, sub-region and intermediate-region 
+    category to give indications of inter-continental or cross-regional traffic.
+    Specifically, for the case of Kenya, the submarine cable map suggests that it is 
+    one hop in a heavily-connected cable system on the exterior of Africa, Western Asia,
+    and Western Europe coast. Therefore, the initial choices of countries will be from
+    sub-regions:
+        
+        i) Northern Europe
+        ii) Western Europe
+        iii) Sub-Saharan Africa - Southern Africa
+        iv) Western Asia
+        v) Sub-Saharan Africa - Eastern Africa
+    
+    We will first choose 2 most heavily probed nations in the categories to give an 
+    overview on how the data will look like
