@@ -14,7 +14,7 @@ and attempt to iteratively select information most closely aligned with the assu
 
 One prevalent challenges across all works seem to be the awareness that
 the submarine cable information remains the most occluded resources among 
-available internet data, suffering from problems:
+available internet data, suffering from problems
 
     a. there is no guarantee that the cable ownership woule align with the ASN
     of each cable, as cables can be leased to other ISPS. Additionally, current
@@ -66,7 +66,7 @@ traceroute would fail any attempt to probe the inter-continental location suffer
 from cable breakage. Both occurences may be observable simply from the traceroute data.
 
 Admittedly, the study design is still subject to a number of assumptions about the 
-subsea cable system:
+subsea cable system
 
     a. if multiple parallel cables are anycasted and share the same IP address, the
     breakage may not be observable. However, existing studies also rely heavily on
