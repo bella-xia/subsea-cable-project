@@ -174,10 +174,8 @@ if __name__ == '__main__':
                 
                 if args.target == 'node':
                     node_transit_tuple = [(node, G.nodes[node]['transit']) for node in G.nodes]
-                    high_transit_nodes = sorted(node_transit_tuple, key=lambda x : x[1], reverse=True)
-                    if args.threshold:
-                        # high_transit_nodes = high_transit_nodes[:args.threshold]
-                        high_transit_nodes = [(node, count) for (node, count) in node_transit_tuple if count > args.threshold]
+                    threshold = args.threshold if args.threshold else 0
+                    high_transit_nodes = [(node, count) for (node, count) in node_transit_tuple if count > threshold]
                     if args.out_format == 'json':
                         transit_node_with_degrees = [{'node': node, 'count': transit} for (node, transit) in high_transit_nodes]
                         json_dict[label] = transit_node_with_degrees
@@ -185,12 +183,9 @@ if __name__ == '__main__':
                     elif args.out_format == 'image':
                         process_node_graph(G, high_transit_nodes, f'{args.output_prefix}/{args.target}+{args.mode}+bound+{args.threshold}')
                 elif args.target == 'edge':
-                    # TODO: process connection
                     edge_weight_tuple = [(edge, G.edges[edge]['weight']) for edge in G.edges()]
-                    # high_utilized_edges = sorted(edge_weight_tuple, key = lambda x : x[1], reverse=True)
-                    if args.threshold:
-                       #  high_utilized_edges = high_utilized_edges[:args.threshold]
-                        high_utilized_edges = [(edge, count) for (edge, count) in edge_weight_tuple if count > args.threshold]
+                    threshold = args.threshold if args.threshold else 0
+                    high_utilized_edges = [(edge, count) for (edge, count) in edge_weight_tuple if count > threshold]
                     if args.out_format == 'json':
                         transit_edge_with_weights = [{'node': f'{edge[0]}->{edge[1]}', 'count': weight} for (edge, weight) in high_utilized_edges]
                         json_dict[label] = transit_edge_with_weights
