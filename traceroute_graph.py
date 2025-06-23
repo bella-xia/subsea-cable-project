@@ -1,11 +1,12 @@
 import networkx as nx
 import matplotlib.pyplot as plt
-import argparse, gzip, json, re
+import argparse, gzip, json, re, os
 from tqdm import tqdm
 from ipwhois.net import Net
 from ipwhois.asn import IPASN
 
 GLOBAL_ASN_DICT : dict[int, str] = {}
+GLOBAL_PREFIX_DICT :  dict[int, str] = {}
 
 def is_private(ip_addr : str) -> bool:
     # private ips include:
@@ -34,7 +35,7 @@ def convert_ip_str_to_number(ip_addr : str) -> int | None:
         return None
     return ip_num
 
-def longest_prefix_match_asn(ip_addr : str) -> str | None: 
+def longest_prefix_match(ip_addr : str, mode: str) -> str | None: 
     ip_num = convert_ip_str_to_number(ip_addr)
 
     # invalid ip
@@ -45,8 +46,9 @@ def longest_prefix_match_asn(ip_addr : str) -> str | None:
         # get rid of the last digit
         mask = (1 << prefix_len) - 1 << (32 - prefix_len)
         ip_num = ip_num & mask
-        if GLOBAL_ASN_DICT.get(ip_num, None):
-            return GLOBAL_ASN_DICT[ip_num]
+        query = GLOBAL_ASN_DICT.get(ip_num, None) if mode == 'asn' else GLOBAL_PREFIX_DICT.get(ip_num, None)
+        if query:
+            return query
         prefix_len -= 1
     
     return None
@@ -61,10 +63,10 @@ def extract_path(data : dict[any], mode : str) -> list[str]:
     if mode == 'ip':
         return ip_addrs
 
-    asns = []
+    paths = []
     
     for _, ip_addr in enumerate(ip_addrs):
-        record = longest_prefix_match_asn(ip_addr)
+        record = longest_prefix_match(ip_addr, mode)
         if record == 'None':
             continue
         if record:
@@ -73,26 +75,28 @@ def extract_path(data : dict[any], mode : str) -> list[str]:
             net = Net(ip_addr)
             obj = IPASN(net)
             results = obj.lookup()
-            if not results or not results['asn_cidr'] or not results['asn'] or not results['asn_country_code']:
+            if not results or not results['asn_cidr'] or not results['asn'] or not results['asn_country_code'] or results['asn_cidr'] == 'NA' or results['asn'] == 'NA':
                 continue
+            prefix = results['asn_cidr'].split('/')[0]
+            if mode == 'prefix':
+                label = results['asn_cidr']
+                GLOBAL_PREFIX_DICT[convert_ip_str_to_number(prefix)] = results['asn_cidr']
+            elif mode == 'asn':
+                if results['asn'] == 'NA':
+                    GLOBAL_ASN_DICT[convert_ip_str_to_number(ip_addr)] = 'None'
+                    continue
+                else:
+                    label = results['asn_description'] if (results['asn_description'] and len(results['asn_description']) > 0) else f"{results['asn']}, {results['asn_country_code']}"
+                    GLOBAL_ASN_DICT[convert_ip_str_to_number(prefix)] = label
 
-            if results['asn'] == 'NA':
-                GLOBAL_ASN_DICT[convert_ip_str_to_number(ip_addr)] = 'None'
-                continue
-            else:
-                label = results['asn_description'] if (results['asn_description'] and len(results['asn_description']) > 0) else f"{results['asn']}, {results['asn_country_code']}"
-                prefix = results['asn_cidr'].split('/')[0]
-                GLOBAL_ASN_DICT[convert_ip_str_to_number(prefix)] = label
-
-        if len(asns) == 0 or asns[-1] != label:
-            asns.append(label)
-    return asns
-
+        if len(paths) == 0 or paths[-1] != label:
+            paths.append(label)
+    return paths
 
 def process_node_graph(G, high_transit_nodes, file_prefix):
-    
-    nodes_to_display = set(high_transit_nodes)
-    for node in high_transit_nodes:
+    nodes_to_display = set([data[0] for data in high_transit_nodes])
+    high_transit_nodes_copy = nodes_to_display.copy()
+    for node, _ in high_transit_nodes:
         nodes_to_display.update(G.neighbors(node))
     
     nodes_to_display_arr = list(nodes_to_display)
@@ -104,21 +108,39 @@ def process_node_graph(G, high_transit_nodes, file_prefix):
     node_sizes = [200 if node in high_transit_nodes else 50 for node in sub_G.nodes()]
     nx.draw_networkx_nodes(sub_G, pos, node_color=node_colors, node_size=node_sizes)
     nx.draw_networkx_edges(sub_G, pos, edge_color='gray', alpha=0.6)
-    nx.draw_networkx_labels(G, pos, labels={n:n for n in sub_G.nodes}, font_size=5)
+    nx.draw_networkx_labels(G, pos, labels={n:n for n in sub_G.nodes}, font_size=10)
 
     plt.title(f"{label} Traceroute Transit Graph with Node >={args.threshold} Highlighted")
     plt.savefig(f'images/{file_prefix}/{label}-traceroute-high-transit-node-bound{args.threshold}.png')
+    plt.close()
 
 
 def process_edge_graph(G, high_utilized_edges, file_prefix):
-    # TODO
-    raise Exception("unimplemented")
+    nodes_to_display = set()
+    for edge, _ in high_utilized_edges:
+        nodes_to_display.add(edge[0])
+        nodes_to_display.add(edge[1])
+    
+    nodes_to_display_arr = list(nodes_to_display)
+    plt.figure(figsize=(20, 15))
+    sub_G = G.subgraph(nodes_to_display_arr)
+    pos = nx.spring_layout(sub_G, k=0.3, iterations=50)
+    # node_colors = ['red' if node in high_transit_nodes else 'lightgray' for node in sub_G.nodes()]
+    # node_sizes = [200 if node in high_transit_nodes else 50 for node in sub_G.nodes()]
+    nx.draw_networkx_nodes(sub_G, pos, 
+                           #node_color=node_colors, node_size=node_sizes
+                           )
+    nx.draw_networkx_edges(sub_G, pos, edge_color='gray', alpha=0.6)
+    nx.draw_networkx_labels(G, pos, labels={n:n for n in sub_G.nodes}, font_size=10)
 
+    plt.title(f"{label} Traceroute Transit Graph with Edge >={args.threshold} Highlighted")
+    plt.savefig(f'images/{file_prefix}/{label}-traceroute-high-utilized-edge-bound{args.threshold}.png')
+    plt.close()   
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, required=True)
-    parser.add_argument("--threshold", type=int, default=0)
+    parser.add_argument("--threshold", type=int, default=None)
     parser.add_argument("--mode", type=str, default="ip") # node frequency or edge frequency
     parser.add_argument("--out_format", type=str, default="json") # choose whether use json to parse data or output images directly
     parser.add_argument("--target", type=str, default="node") # check whether we are looking at node (ip / asn) or connection (tuple[ip, ip])
@@ -129,6 +151,8 @@ if __name__ == '__main__':
     json_dict = {}
 
     prev_label = None
+    if args.out_format == 'image':
+        os.makedirs(f'images/{args.output_prefix}/{args.target}+{args.mode}+bound+{args.threshold}', exist_ok=True)
     
     with gzip.open(args.input_dir, 'rt', encoding='utf-8') as f:
         for line in tqdm(f):
@@ -143,31 +167,36 @@ if __name__ == '__main__':
             label = f"{re_date.group(2)}-{re_date.group(3)}-{re_date.group(4)}"
             if not prev_label:
                 # init new instnace
-                G = nx.Graph()
+                G = nx.DiGraph()
                 unique_probes = set()
 
             elif prev_label != label:
                 
                 if args.target == 'node':
                     node_transit_tuple = [(node, G.nodes[node]['transit']) for node in G.nodes]
-                    high_transit_nodes = sorted(node_transit_tuple, key=lambda x : x[1], reverse=True)[:args.threshold] 
+                    high_transit_nodes = sorted(node_transit_tuple, key=lambda x : x[1], reverse=True)
+                    if args.threshold:
+                        # high_transit_nodes = high_transit_nodes[:args.threshold]
+                        high_transit_nodes = [(node, count) for (node, count) in node_transit_tuple if count > args.threshold]
                     if args.out_format == 'json':
                         transit_node_with_degrees = [{'node': node, 'count': transit} for (node, transit) in high_transit_nodes]
                         json_dict[label] = transit_node_with_degrees
 
                     elif args.out_format == 'image':
-                        process_node_graph(G, high_transit_nodes, args.output_prefix)
+                        process_node_graph(G, high_transit_nodes, f'{args.output_prefix}/{args.target}+{args.mode}+bound+{args.threshold}')
                 elif args.target == 'edge':
                     # TODO: process connection
                     edge_weight_tuple = [(edge, G.edges[edge]['weight']) for edge in G.edges()]
-                    high_utilized_edges = sorted(edge_weight_tuple, key = lambda x : x[1], reverse=True)[:args.threshold]
-                    
+                    # high_utilized_edges = sorted(edge_weight_tuple, key = lambda x : x[1], reverse=True)
+                    if args.threshold:
+                       #  high_utilized_edges = high_utilized_edges[:args.threshold]
+                        high_utilized_edges = [(edge, count) for (edge, count) in edge_weight_tuple if count > args.threshold]
                     if args.out_format == 'json':
                         transit_edge_with_weights = [{'node': f'{edge[0]}->{edge[1]}', 'count': weight} for (edge, weight) in high_utilized_edges]
                         json_dict[label] = transit_edge_with_weights
 
-                    elif args.output_format == 'image':
-                        process_edge_graph(G, high_utilized_tuples, args.output_prefix)
+                    elif args.out_format == 'image':
+                        process_edge_graph(G, high_utilized_edges, f'{args.output_prefix}/{args.target}+{args.mode}+bound+{args.threshold}')
 
                 G.clear()
                 unique_probes.clear()
@@ -199,5 +228,6 @@ if __name__ == '__main__':
                     prev_str = ip_addr
 
         if args.out_format == 'json':
-            with open(f'data/{args.output_prefix}-traceroute-le{args.threshold}-{args.mode}-for-{args.target}.json', 'w') as f:
+            output_name = f'data/{args.output_prefix}-traceroute-le{args.threshold}-{args.mode}-for-{args.target}.json' if args.threshold else f'data/{args.output_prefix}-traceroutes-{args.mode}-for-{args.target}.json' 
+            with open(output_name, 'w') as f:
                 json.dump(json_dict, f, indent=4)

@@ -47,7 +47,11 @@ if __name__ == '__main__':
         plt.savefig(f'{args.output_dir}/{args.unit}_presence_heatmap_{args.target}.png')
 
     else:
-        filtered_df = df[df['count'] > args.threshold]    
+        sorted_df = df.sort_values(by='count', ascending=False)
+        top_ip_rows = sorted_df.drop_duplicates(subset='ip_address').head(args.threshold)
+        filtered_ips = top_ip_rows['ip_address'].unique()
+        filtered_ips_set = set(filtered_ips)
+        filtered_df = df[df['ip_address'].isin(filtered_ips_set)]    
         filtered_pivot_df = filtered_df.pivot_table(index='ip_address', columns='date', values='count', observed=False).fillna(0)
 
         plt.figure(figsize=(15 if args.target == 'node' else 20, 10 if args.target == 'node' else 15))

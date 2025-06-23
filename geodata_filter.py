@@ -80,7 +80,7 @@ if __name__ == '__main__':
             #     break
     if args.destination: 
         sorted_aggre_data = dict(sorted(aggre_data.items(), key=lambda item: item[0]))
-        with gzip.open(f"data/{args.output_prefix}-probes.jsonl.gz",'wt', encoding='utf-8') as f:
+        with gzip.open(f"data/probe_filter/{args.output_prefix}-probes.jsonl.gz",'wt', encoding='utf-8') as f:
             for key, value in sorted_aggre_data.items():
                 json_line = json.dumps({key: value})
                 f.write(json_line + '\n')
