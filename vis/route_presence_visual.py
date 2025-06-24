@@ -17,6 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('--unit', type=str, default='ip_address')
     parser.add_argument('--target', type=str, default='node')
     parser.add_argument('--output_dir', type=str, required=True)
+    parser.add_argument('--filter', type=str, default='all')
 
     args = parser.parse_args()
 

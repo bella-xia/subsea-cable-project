@@ -85,7 +85,7 @@ if __name__ == '__main__':
                 json_line = json.dumps({key: value})
                 f.write(json_line + '\n')
     else:
-        with open('data/destination-probes-{args.output_prefix}', 'w') as f:
+        with open('data/destination-probes-{args.output_prefix}.json', 'w') as f:
             json.dump(aggre_dict, f, indent=4)
 
 
