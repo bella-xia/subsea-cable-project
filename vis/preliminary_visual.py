@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 import gzip, argparse, json, statistics, re
 from tqdm import tqdm
 
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, required=True)
@@ -31,6 +29,8 @@ if __name__ == '__main__':
             for item in value:
                 counter_aggre[date_key].setdefault(item['stop-reason'], 0)
                 counter_aggre[date_key][item['stop-reason']] += 1
+                print(item)
+                exit(0)
             if not data_aggre.get(date_key, None):
                 data_aggre[date_key] = {
                     'max-rtts': [],
@@ -51,11 +51,15 @@ if __name__ == '__main__':
         hop_num_avg.append(statistics.mean(value['hop-nums']))
         hop_num_std.append(statistics.stdev(value['hop-nums']) if len(value['hop-nums']) > 1 else 0)
     
+    exit(0)
 
     # graph 1: on stop reasons
-    fig, ax = plt.subplots(figsize=(15, 10))
+    fig1, ax1 = plt.subplots(figsize=(15, 10))
+    fig2, ax2 = plt.subplots(figsize=(15, 10))
     counter_keys = list(counter_aggre.keys())
-    counter_cats = sorted({cat for counts in counter_aggre.values() for cat in counts if cat != 'gaplimit'})
+    total_probes_per_day = {k : sum([c for _, c in v.items()]) for k, v in counter_aggre.items()}
+    counter_cats = sorted({cat for counts in counter_aggre.values() for cat in counts}) 
+                           #if cat != 'gaplimit'})
 
     color_map = {
     'noreason': 'tab:gray',
@@ -66,19 +70,39 @@ if __name__ == '__main__':
     'gss': 'tab:yellow',
     'icmp': 'tab:pink',
     'hoplimit': 'tab:purple',
+    'gaplimit': 'tab:olive',
     }
     bottom = [0] * len(counter_keys)
     for cat in counter_cats:
         values = [counter_aggre[key].get(cat, 0) for key in counter_keys]
-        ax.bar(counter_keys, values, bottom=bottom, label=cat, color=color_map[cat])
-        bottom = [b + v for b, v, in zip(bottom, values)]      
+        ratios = [counter_aggre[key].get(cat, 0) / total_probes_per_day[key] for key in counter_keys]
+        if cat != 'gaplimit':
+            ax1.bar(counter_keys, values, bottom=bottom, label=cat, color=color_map[cat])
+            ax2.plot(counter_keys, ratios,label=cat, color=color_map[cat])
+            bottom = [b + v for b, v, in zip(bottom, values)]      
     
-    ax.set_ylabel('probe counts')
-    ax.set_xlabel('Time Duration')
-    ax.tick_params(axis='x', labelrotation=30, labelsize=8)
-    ax.legend(title='stop reason')
-    fig.savefig(f'{args.output_dir}/per-{args.unit}-stop-hop-reason-histogram.png')
+    ax1.set_ylabel('probe counts')
+    ax1.set_xlabel('Time Duration')
+    ax1.tick_params(axis='x', labelrotation=30, labelsize=8)
+    ax1.legend(title='stop reason')
+    fig1.savefig(f'{args.output_dir}/per-{args.unit}-stop-hop-reason-counts-no-gaplimit-histogram.png')
 
+    ax2.set_ylabel('probe ratio')
+    ax2.set_xlabel('Time Duration')
+    ax2.tick_params(axis='x', labelrotation=30, labelsize=8)
+    ax2.legend(title='stop reason')
+    fig2.savefig(f'{args.output_dir}/per-{args.unit}-stop-hop-reason-ratios-no-gaplimit-histogram.png')
+    
+    values = [counter_aggre[key].get('gaplimit', 0) for key in counter_keys]
+    ratios = [counter_aggre[key].get('gaplimit', 0) / total_probes_per_day[key] for key in counter_keys]
+    ax1.bar(counter_keys, values, bottom=bottom, label='gaplimit', color=color_map['gaplimit'])
+    ax1.legend(title='stop reason')
+    ax2.plot(counter_keys, ratios,label='gaplimit', color=color_map['gaplimit'])
+    ax2.legend(title='stop reason')
+    fig1.savefig(f'{args.output_dir}/per-{args.unit}-stop-hop-reason-counts-histogram.png')     
+    fig2.savefig(f'{args.output_dir}/per-{args.unit}-stop-hop-reason-ratios-histogram.png')
+    plt.close()
+    exit(0)
 
     # graph 2: all completed trip time statistics
     fig, axes = plt.subplots(2, 1, figsize=(30, 10))
