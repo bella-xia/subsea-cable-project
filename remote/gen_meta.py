@@ -1,10 +1,6 @@
-import os, argparse, logging, re
+import os, argparse, re, csv
 from utils import sort_measure_cycle
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
-    
 def _parse_meta(filename: str) -> bool:
     dump_pattern = re.compile(r"(\w{3}\d*)-(\w{2})\.team-probing\.c\d{6}\.(\d{4})(\d{2})(\d{2})")
     s = dump_pattern.search(filename)
@@ -22,21 +18,32 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--directory", type=str, default="/data/topology/ark/data/team-probing/list-7.allpref24/team-1/daily/2024")
-    parser.add_argument("-date", type=str, default=None)
+    parser.add_argument("--meta_dir", type=str, default="data/iso-3166-countries-with-regional-codes.csv")
+    parser.add_argument('--mode', type=str, default='vantage-point')
     args = parser.parse_args()
-
+    
     if not os.path.exists(args.directory):
-        logger.debug(f"address {args.directory} does not exit")
+        print(f"address {args.directory} does not exist")
         exit(0)
+
+    if not os.path.exists(args.meta_dir):
+        print(f"address {args.meta_dir} does not exist")
+        exit(0)
+
+    iso2cn_map = {}
+
+    with open(args.meta_dir, newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            iso2cn_map[row['alpha-2'].lower()] = row['name']
     
     # get a specific path
     cycles = os.listdir(args.directory)
     sort_measure_cycle(cycles)
 
-    print(cycles)
-    
     dates_measured = os.listdir(args.directory)
     persistent_cn : set[str] = set()
+    persistent_vp : set[str] = set()
 
     for date in dates_measured:
         path = os.path.join(args.directory, date)
@@ -47,20 +54,27 @@ if __name__ == '__main__':
         for d in data:
             meta = _parse_meta(d)
             if meta:
-                vp_map.setdefault(meta['country-code'], set())
-                vp_map[meta['country-code']].add(meta['airport'])
+                country_name = iso2cn_map.get(meta['country-code'], '')
+                country_name += f'({meta["country-code"]})'
+                vp_map.setdefault(country_name, set())
+                vp_map[country_name].add(meta['airport'])
         
         sorted_vp_map = dict(sorted(vp_map.items(), key=lambda item: len(item[1])))
-        print(sorted_vp_map['ke']) # check Kenya --> there is one airport in nbo
         if len(persistent_cn) == 0:
             persistent_cn = set(sorted_vp_map.keys())
         else:
             persistent_cn.intersection(sorted_vp_map.keys())
         
-        
-        # print(f"there are a total of {len(vp_map)} countries with VP")
-        # print(vp_map.keys())
+        all_vps = []
+        for cn, vps in sorted_vp_map.items():
+            all_vps.extend([f'{cn}-{vp}' for vp in vps])
+        if len(persistent_vp) == 0:
+            persistent_vp = set(all_vps)
+        else:
+            persistent_vp.intersection(all_vps)
+    if args.mode == 'country':
+        print(persistent_cn)
+    elif args.mode == 'vantage-point':
+        sorted_vp = sorted(list(persistent_vp))
+        print(sorted_vp)
 
-    # print(f"top 10 countries with the most VP: {list(sorted_vp_map.items())[-10:]}")
-    # print(f"top 10 countries with the least VP: {list(sorted_vp_map.items())[:10]}")
-    print(persistent_cn)

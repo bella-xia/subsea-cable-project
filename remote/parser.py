@@ -45,12 +45,14 @@ class WartsDumpParser:
             name: a string containing the name in a DNS PTR record that was looked up, if scamper attempted to resolve a PTR for the IP address.
             tx: a datetime for when the probe was sent, or None if scamper did not record a timestamp.  
             rtt: a timedelta containing the round-trip-time for this response.
+            probe_ttl: the TTL set in the probe packet
         '''
         try:
             src, name = str(obj.src), obj.name
             rtt = obj.rtt
+            probe_ttl = obj.probe_ttl
             rtt = rtt.total_seconds() * 1000
-            return {"src": src, "name": name, "rtt": rtt}
+            return {"src": src, "name": name, "rtt": rtt, 'probe-ttl': probe_ttl}
         except Exception as e:
             parse_error("scamperhop", f"received exception [{str(e)}]")
     
