@@ -19,6 +19,13 @@
 -> util/
    -> ip_checker.py
 
+-> remote/ [responsible for processing raw data on ssh remote server]
+   -> gen_meta.py
+   -> read_data.py
+   -> parser.py
+   -> errors.py
+   -> utils.py
+
 -> requirements.txt
 ```
 
@@ -123,4 +130,18 @@ python per_dest_pipeline.py --vp 'Kenya' --dst 'South Africa'
 
 **outputs**
 - stdout aggregated info on IP address CIDR, AS-related info, geolocation-related info
+
+### remote/gen_meta.py
+**dependencies**
+- CAIDA ark measurement data located at '/data/topology/ark/data/team-probing/list-7.allpref24/team-1/2024/[measurement date]'
+- metadata on each country code's associated continent, subregion, and intermediate region
+
+**accepted aruments**
+- `--directory` [*default='/data/topology/ark/data/team-probing/list-7.allpref24/team-1/2024'*] the directory that stores all CAIDA ARK traceroute probes
+- `--meta_dir [*default='data/iso-3166-countries-with-regional-codes.csv'*] 
+
+**outputs**
+
+
+
 
