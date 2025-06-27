@@ -29,8 +29,6 @@ if __name__ == '__main__':
             for item in value:
                 counter_aggre[date_key].setdefault(item['stop-reason'], 0)
                 counter_aggre[date_key][item['stop-reason']] += 1
-                print(item)
-                exit(0)
             if not data_aggre.get(date_key, None):
                 data_aggre[date_key] = {
                     'max-rtts': [],
@@ -50,8 +48,6 @@ if __name__ == '__main__':
         max_rtt_std.append(statistics.stdev(value['max-rtts']) if len(value['max-rtts']) > 1 else 0)
         hop_num_avg.append(statistics.mean(value['hop-nums']))
         hop_num_std.append(statistics.stdev(value['hop-nums']) if len(value['hop-nums']) > 1 else 0)
-    
-    exit(0)
 
     # graph 1: on stop reasons
     fig1, ax1 = plt.subplots(figsize=(15, 10))
@@ -102,7 +98,6 @@ if __name__ == '__main__':
     fig1.savefig(f'{args.output_dir}/per-{args.unit}-stop-hop-reason-counts-histogram.png')     
     fig2.savefig(f'{args.output_dir}/per-{args.unit}-stop-hop-reason-ratios-histogram.png')
     plt.close()
-    exit(0)
 
     # graph 2: all completed trip time statistics
     fig, axes = plt.subplots(2, 1, figsize=(30, 10))
