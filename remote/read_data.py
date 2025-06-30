@@ -48,7 +48,7 @@ if __name__ == '__main__':
         output_dir += '-' + args.airport_spec
     if args.probe_num_spec:
         output_dir += '-' + str(args.probe_num_spec)
-    output_dir += 'jsonl.gz'
+    output_dir += '.jsonl.gz'
     with gzip.open(output_dir, 'wt', encoding='utf-8') as f:
         for key, value in graph_data.items():
             json_line = json.dumps({key: value})
