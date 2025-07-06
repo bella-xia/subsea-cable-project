@@ -153,7 +153,10 @@ def process_current_node_graph(G):
             json_dict[label] = transit_node_with_degrees
 
         elif args.out_format == 'image':
-            process_node_graph(G, high_transit_nodes, f'{output_prefix}/{args.target}-{args.mode}-bound-{args.threshold}')
+            process_node_graph(G, high_transit_nodes, f'{output_prefix}/{args.target}_{args.mode}_bound_{args.threshold}')
+        elif args.out_format == 'xml':
+            os.makedirs(f'data/graphs/{args.output_prefix}', exist_ok=True)
+            nx.write_graphml(G, f'data/graphs/{args.output_prefix}/{label}_trace_{args.target}.graphml')
 
 def process_current_edge_graph(G):
     edge_weight_tuple = [(edge, G.edges[edge]['weight']) for edge in G.edges()]
@@ -164,20 +167,23 @@ def process_current_edge_graph(G):
         json_dict[label] = transit_edge_with_weights
 
     elif args.out_format == 'image':
-        process_edge_graph(G, high_utilized_edges, f'{output_prefix}/{args.target}-{args.mode}-bound-{args.threshold}')
+        process_edge_graph(G, high_utilized_edges, f'{output_prefix}/({args.start_time})2({args.end_time})_{args.target}_{args.mode}_bound_{args.threshold}')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, required=True)
     parser.add_argument("--threshold", type=int, default=None)
     parser.add_argument("--mode", type=str, default="ip")
-    parser.add_argument("--out_format", type=str, default="json")
+    parser.add_argument("--out_format", type=str, default="json") # choices: json, image, xml
     parser.add_argument("--target", type=str, default="node")
     parser.add_argument('--output_prefix', type=str, required=True)
     parser.add_argument('--maxmind_db', type=str, default='data/GeoLite2-ASN.mmdb')
     parser.add_argument('--start_time', type=str, default='xx')
     parser.add_argument('--end_time', type=str, default='xx')
     args = parser.parse_args()
+
+    if args.out_format == 'xml':
+        args.target = 'node' # ensure we onlt need to implement xml save logic in one processing helper function
     
     date_pattern = re.compile(r'(c\d+)\.\d{2}(\d{2})(\d{2})(\d{2})\.warts.gz')
     json_dict = {}
