@@ -79,12 +79,15 @@ if __name__ == '__main__':
     iso_data = pandas.read_csv(args.region_db, on_bad_lines='skip')
     country2iso = {}
     for cn in list(country_set):
+        if cn == 'United Kingdom':
+            country2iso[cn] = 'uk'
+            continue
         filtered_iso = iso_data[iso_data['name'] == cn]
         if len(filtered_iso) < 1:
             country2iso[cn] = 'unknown'
         else:
             country2iso[cn] = filtered_iso.iloc[0]['alpha-2'].lower()
-    
+    print(country2iso) 
     qcns = [cn for cn, iso in country2iso.items() if (iso != 'unknown' and os.path.exists(os.path.join(args.input_dir, f'all-meta-from-{iso}.jsonl.gz')))]
     
     output_data = dict([(qcn, {}) for qcn in qcns])
@@ -97,7 +100,7 @@ if __name__ == '__main__':
                 partial_dict = json.loads(line)
                 for key, value in partial_dict.items():
                     break
-                pattern = re.search(r'([\d\w\-]+)\.team\-probing\.c\d+\.(\d{4})(\d{2})(\d{2})\.warts\.gz', key)
+                pattern = re.search(r'([\d\w\-]+)\.team\-probing\.c\d+\.\d{2}(\d{2})(\d{2})(\d{2})\.warts\.gz', key)
                 if not pattern:
                     continue
                 ident = f'{pattern.group(1)}({pattern.group(2)}-{pattern.group(3)}-{pattern.group(4)})'
@@ -127,7 +130,7 @@ if __name__ == '__main__':
                     for k, count in dist.items():
                         output_data[qcn][ident][cn][k] = output_data[qcn][ident][cn].get(k, 0) + count
                 
-    with open(f'data/intercontinental-data-{args.mode}.json', 'w') as f:
+    with open(f'data/crosscn-data-{args.mode}-{"+".join(sorted([country2iso[qcn] for qcn in qcns]))}.json', 'w') as f:
         json.dump(output_data, f, indent=4)
         
 

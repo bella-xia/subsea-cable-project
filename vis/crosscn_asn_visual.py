@@ -1,26 +1,7 @@
 import os, argparse, json
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-
-def date_generator(start_date, end_date, gap):
-    DATE_INFO = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    buf = start_date.split('-')
-    start_year, start_month, start_day = int(buf[0]), int(buf[1]), int(buf[2])
-    buf = end_date.split('-')
-    end_year, end_month, end_day = int(buf[0]), int(buf[1]), int(buf[2])
-    
-    current_year, current_month, current_day = start_year, start_month, start_day
-
-    while current_year < end_year or (current_year == end_year and current_month < end_month) or (current_year == end_year and current_month == end_month and current_day <= end_day):
-        ret_year = str(current_year)
-        ret_month = str(current_month) if current_month >= 10 else '0' + str(current_month)
-        ret_day = str(current_day) if current_day >= 10 else '0' + str(current_day)
-        current_day += gap
-        if current_day > DATE_INFO[current_month - 1]:
-            current_day -= DATE_INFO[current_month - 1]
-            current_month = current_month + 1 if current_month != 12 else 1
-            current_year = current_year if current_month != 1 else current_year + 1
-        yield f'{ret_year}-{ret_month}-{ret_day}'
+from utils.date_processing import generate_date_sequence
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -28,13 +9,15 @@ if __name__ == '__main__':
     parser.add_argument('--vp', type=str, default=None)
     parser.add_argument('--start_date', type=str, default='2024-01-30')
     parser.add_argument('--end_date', type=str, default='2024-03-25')
-    parser.add_argument('--gap', type=int, default=5)
+    parser.add_argument('--gap', type=int, default=1)
     parser.add_argument('--airport', type=str, default=None)
     parser.add_argument('--threshold', type=int, default=15)
     parser.add_argument('--supple_color', type=int, default=10)
     parser.add_argument('--primary_cmap', type=str, default='tab20')
     parser.add_argument('--supple_cmap', type=str, default='viridis')
     parser.add_argument('--label', type=str, default='maxmind')
+    parser.add_argument('--front_as', action='store_true')
+
     args = parser.parse_args()
     with open(args.input_dir, 'r') as f:
        data = json.load(f)
@@ -48,73 +31,73 @@ if __name__ == '__main__':
         print('available airports:', airports)
         exit(0)
     vp_lab = ''.join(args.vp.lower().split())
-    date_gen = date_generator(args.start_date, args.end_date, args.gap)
-    os.makedirs(f'images/{vp_lab}-intercountry-asn/{args.airport}-{args.label}', exist_ok=True)
+    os.makedirs(f'images/{vp_lab}-intercountry-asn/{args.airport}-{args.label}-{"" if not args.front_as else "front-as"}', exist_ok=True)
     pri_cmap = plt.get_cmap(args.primary_cmap)
     sup_cmap = plt.get_cmap(args.supple_cmap).resampled(args.supple_color)
     cmap_idx = 0
     asn2color = {}
     global_unique_asns = set()
- 
-    try:
-        while True:
-            date_str = next(date_gen)
-            query_data = data[args.vp].get(f'{args.airport}({date_str})', None)
-            if not query_data:
-                print(f'unable to find {args.airport}({date_str}), skipping...')
-                continue
-            print(f'querying {args.airport}({date_str})...')
-            cns = sorted(list(query_data.keys()))
-            unique_asns = set()
-            all_counters = {}
-            filtered_query_data = {}
-            for cn in cns:
-                all_counts = sum(list(query_data[cn].values()))
-                all_counters[cn] = float(all_counts)
-                filtered_data = dict([(k, v) for k, v in query_data[cn].items() if v > (all_counts // args.threshold)])
-                filtered_query_data[cn] = {}
-                filtered_query_data[cn]['other'] = all_counts - sum(list(filtered_data.values()))
-                filtered_query_data[cn].update(filtered_data)
-                unique_asns = unique_asns.union(list(filtered_data.keys()))
-            unique_asns = sorted(list(unique_asns))
-            unique_asns.append('other')
-            figs, axes = plt.subplots(2, 1, figsize=(15, 10))
-            bars = axes[0].bar(all_counters.keys(), all_counters.values())
-            for bar in bars:
-                height = bar.get_height()
-                axes[0].text(bar.get_x() + bar.get_width() / 2, height + 50, f'{int(height)}', ha='center', va='bottom')
-            axes[0].set_xlabel('country probed')
-            axes[0].set_ylabel('probes completed')
-            axes[0].set_title(f'{args.airport}({args.vp}) on {date_str}: total probes to each country')
-            bottom = [0.0] * len(cns)
-            for idx, asn in enumerate(unique_asns):
-                if asn not in asn2color:
-                    global_unique_asns.add(asn)
-                    if cmap_idx >= 20 + args.supple_color:
-                        continue 
-                    c = pri_cmap(cmap_idx) if cmap_idx < 20 else sup_cmap(cmap_idx - 20)
-                    asn2color[asn] = c
-                    cmap_idx += 1
-                else:
-                    c = asn2color[asn]
-                values = [filtered_query_data[cn].get(asn, 0.0) for cn in cns]
-                ratios = [float(filtered_query_data[cn].get(asn, 0.0)) / all_counters[cn] for cn in cns]
-                axes[1].bar(cns, ratios, bottom=bottom, label='\n->'.join(asn.split('->')), color=c)
-                bottom = [b + v for b, v in zip(bottom, ratios)]
+    dates = generate_date_sequence(args.start_date, args.end_date, args.gap) 
+    for date_str in dates:
+        query_data = data[args.vp].get(f'{args.airport}({date_str})', None)
+        if not query_data:
+            print(f'unable to find {args.airport}({date_str}), skipping...')
+            continue
+        print(f'querying {args.airport}({date_str})...')
+        cns = sorted(list(query_data.keys()))
+        unique_asns = set()
+        all_counters = {}
+        filtered_query_data = {}
+        for cn in cns:
+            all_counts = sum(list(query_data[cn].values()))
+            all_counters[cn] = float(all_counts)
+            if args.front_as:
+                processed_query_data = {}
+                for k, v in query_data[cn].items():
+                    mod_k = k.split('->')[0]
+                    processed_query_data[mod_k] = processed_query_data.get(mod_k, 0) + query_data[cn][k]
+            else:
+                processed_query_data = query_data[cn]
 
-            axes[1].legend(title='asn', loc='center left', bbox_to_anchor=(1.01, 0.5), borderaxespad=0, frameon=False) 
-            axes[1].set_xlabel('country probed')
-            axes[1].set_ylabel('ASN proportion in inter-country path')
-            axes[1].set_title(f'Inter-Country Link ASN distribution')
-            plt.tight_layout()
-            plt.savefig(f'images/{vp_lab}-intercountry-asn/{args.airport}-{args.label}/{args.vp}-{args.airport}-{date_str}.png')
-            plt.close()
-    except StopIteration:
-        pass
-    except Exception as e:
-        print(f'received exception: {str(e)}')
-        exit(-1)
-    
+            filtered_data = dict([(k, v) for k, v in processed_query_data.items() if v > (all_counts // args.threshold)])
+            filtered_query_data[cn] = {}
+            filtered_query_data[cn]['other'] = all_counts - sum(list(filtered_data.values()))
+            filtered_query_data[cn].update(filtered_data)
+            unique_asns = unique_asns.union(list(filtered_data.keys()))
+        unique_asns = sorted(list(unique_asns))
+        unique_asns.append('other')
+        figs, axes = plt.subplots(2, 1, figsize=(15, 10))
+        bars = axes[0].bar(all_counters.keys(), all_counters.values())
+        for bar in bars:
+            height = bar.get_height()
+            axes[0].text(bar.get_x() + bar.get_width() / 2, height + 50, f'{int(height)}', ha='center', va='bottom')
+        axes[0].set_xlabel('country probed')
+        axes[0].set_ylabel('probes completed')
+        axes[0].set_title(f'{args.airport}({args.vp}) on {date_str}: total probes to each country')
+        bottom = [0.0] * len(cns)
+        for idx, asn in enumerate(unique_asns):
+            if asn not in asn2color:
+                global_unique_asns.add(asn)
+                if cmap_idx >= 20 + args.supple_color:
+                    continue 
+                c = pri_cmap(cmap_idx) if cmap_idx < 20 else sup_cmap(cmap_idx - 20)
+                asn2color[asn] = c
+                cmap_idx += 1
+            else:
+                c = asn2color[asn]
+            values = [filtered_query_data[cn].get(asn, 0.0) for cn in cns]
+            ratios = [float(filtered_query_data[cn].get(asn, 0.0)) / all_counters[cn] for cn in cns]
+            axes[1].bar(cns, ratios, bottom=bottom, label='\n->'.join(asn.split('->')), color=c)
+            bottom = [b + v for b, v in zip(bottom, ratios)]
+
+        axes[1].legend(title='asn', loc='center left', bbox_to_anchor=(1.01, 0.5), borderaxespad=0, frameon=False) 
+        axes[1].set_xlabel('country probed')
+        axes[1].set_ylabel('ASN proportion in inter-country path')
+        axes[1].set_title(f'Inter-Country Link ASN distribution')
+        plt.tight_layout()
+        plt.savefig(f'images/{vp_lab}-intercountry-asn/{args.airport}-{args.label}-{"" if not args.front_as else "front-as"}/{args.vp}-{args.airport}-{date_str}.png')
+        plt.close()
+   
     print(f'with a threshold of {args.threshold}, used {len(global_unique_asns)} colors')
    
  
