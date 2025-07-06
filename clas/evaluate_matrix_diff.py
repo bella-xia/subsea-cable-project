@@ -9,6 +9,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', type=str, default='data/graphs')
     parser.add_argument('--norm', type=str, default='sum') # choices include sum, minmax, all
+    parser.add_argument('--start_time', type=str, default='xx')
+    parser.add_argument('--end_time', type=str, default='xx')
     args = parser.parse_args()
     
     ident_pat = re.compile(r'\d{2}\-\d{2}\-\d{2}')
