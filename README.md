@@ -71,6 +71,14 @@ python per_dest_pipeline.py --vp 'Kenya' --dst 'South Africa' --prelim --node --
 - `--node_thres` [*default=40*] the number of row on the visual graph demonstrating per-IP utilization heatmap
 - `--edge_thres` [*default=40*] the number of row on the visual graph demonstrating per IP link tuple utilization heatmap
 - `--graph_thres` [*default=10*] the lower bound on the utilization count IP link tuple (per day) to be visualized on graph
+- `--start` [*default='xx'*] specification on the expected start time of the measurement. written in form '[2-digit year]-[2-digit month]-[2-digit day]'
+- `--end` [*default='xx'*] specification on the expected end time of the measurement, same format as start argument
+- `--prelim` [*action='store_true'*] if specified, will run script 'vis/preliminary_visual.py'. Outputs images on overall network hop number, round-trip time and stop reason statistics
+- `--edge` [*action='store_true'*] if specified, will run script 'proc/traceroute_graph.py' and 'vis/route_presence_visual.py'. Outputs images on per-day heatmap of IP-link (i.e. edge of the IP-connected network graph) utilization presence and density 
+- `--node` [*action='store_true'*] if specified, will run script 'proc/traceroute_graph.py' and 'vis/route_presence_visual.py'. Outputs images on per-day heatmap of IP (i.e. node of the IP-connected network graph) utilization presence and density
+- `--graph` [*action='store_true'*] if specified, will run script 'proc/traceroute_graph.py'. Output per-day directed graph on IP link information obtained from per-hop IP traceroute data
+- `--crosscn_edge` [*action='store_true'*] if specified, will run script 'proc/traceroute_crosscn.py' and 'vis/route_presence_visual.py'. Outputs images on per-day cross-country IP-link utilization presence and density
+- `--contiguous` [*action='store_true'*] if specified, suggests that the period expects contiguous data from each day. Any day without measurement data is indicative of network disconnections
 
 **outputs**
 - 'images/[*argument vp*]2[*argument dst*]' folder, including all visualizations
