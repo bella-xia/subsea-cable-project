@@ -11,11 +11,28 @@ if __name__ == '__main__':
     parser.add_argument('--norm', type=str, default='sum') # choices include sum, minmax, all
     parser.add_argument('--start_time', type=str, default='xx')
     parser.add_argument('--end_time', type=str, default='xx')
+    parser.add_argument('--output_prefix', type=str, default=None)
     args = parser.parse_args()
+
+    if not args.output_prefix:
+        input_dir_arr = args.input_dir.split('/')
+        args.output_prefix = input_dir_arr[-1]
+        if len(args.output_prefix) == 0:
+            args.output_prefix = input_dir_arr[-2]
     
     ident_pat = re.compile(r'\d{2}\-\d{2}\-\d{2}')
     graph_data = sorted(os.listdir(args.input_dir))
 
+    start_idx = 0
+    if args.start_time != 'xx':
+        while graph_data[idx] < args.start_time:
+            start_idx += 1
+    end_idx = -1
+    if args.end_time != 'xx':
+        while graph_data[end_idx] > args.end_time:
+            end_idx -= 1
+
+    graph_data = graph_data[start_idx:end_idx + 1] if end_idx != -1 else graph_data[start_idx:]
     node_set = set()
     
     aggre_k = []
@@ -94,4 +111,4 @@ if __name__ == '__main__':
         ax22.tick_params(axis='y', labelcolor=color)
 
     fig.tight_layout()
-    plt.savefig('output.png')
+    plt.savefig(f'images/classification/{args.output_prefix}_frobenius_dist.png')
