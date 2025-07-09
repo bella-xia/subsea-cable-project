@@ -101,28 +101,27 @@ def extract_path(data : dict[any], mode : str) -> list[str]:
             paths.append(label)
     return paths
 
-def process_node_graph(G, high_transit_nodes, file_prefix):
+def process_node_graph(G, high_transit_nodes, file_prefix, label):
     nodes_to_display = set([data[0] for data in high_transit_nodes])
     high_transit_nodes_copy = nodes_to_display.copy()
     for node, _ in high_transit_nodes:
         nodes_to_display.update(G.neighbors(node))
-    
     nodes_to_display_arr = list(nodes_to_display)
     
     plt.figure(figsize=(20, 15))
     sub_G = G.subgraph(nodes_to_display_arr)
     pos = nx.spring_layout(sub_G, k=0.3, iterations=50)
-    node_colors = ['red' if node in high_transit_nodes else 'lightgray' for node in sub_G.nodes()]
+    node_colors = ['red' if node in high_transit_nodes_copy else 'lightgray' for node in sub_G.nodes()]
     node_sizes = [200 if node in high_transit_nodes else 50 for node in sub_G.nodes()]
     nx.draw_networkx_nodes(sub_G, pos, node_color=node_colors, node_size=node_sizes)
     nx.draw_networkx_edges(sub_G, pos, edge_color='gray', alpha=0.6)
     nx.draw_networkx_labels(G, pos, labels={n:n for n in sub_G.nodes}, font_size=10)
 
     plt.title(f"{label} Traceroute Transit Graph with Node >={args.threshold} Highlighted")
-    plt.savefig(f'images/{file_prefix}/{label}-traceroute-high-transit-node-bound{args.threshold}.png')
+    plt.savefig(f'images/{file_prefix}/{label}_traceroute_high_transit_node_bound{args.threshold}.png')
     plt.close()
 
-def process_edge_graph(G, high_utilized_edges, file_prefix):
+def process_edge_graph(G, high_utilized_edges, file_prefix, label):
     nodes_to_display = set()
     for edge, _ in high_utilized_edges:
         nodes_to_display.add(edge[0])
@@ -131,20 +130,20 @@ def process_edge_graph(G, high_utilized_edges, file_prefix):
     nodes_to_display_arr = list(nodes_to_display)
     plt.figure(figsize=(20, 15))
     sub_G = G.subgraph(nodes_to_display_arr)
+    node_colors = ['lightgray' for node in sub_G.nodes()]
+    node_sizes = [50 for node in sub_G.nodes()]
     pos = nx.spring_layout(sub_G, k=0.3, iterations=50)
-    # node_colors = ['red' if node in high_transit_nodes else 'lightgray' for node in sub_G.nodes()]
-    # node_sizes = [200 if node in high_transit_nodes else 50 for node in sub_G.nodes()]
     nx.draw_networkx_nodes(sub_G, pos, 
-                           #node_color=node_colors, node_size=node_sizes
+                           node_color=node_colors, node_size=node_sizes
                            )
     nx.draw_networkx_edges(sub_G, pos, edge_color='gray', alpha=0.6)
     nx.draw_networkx_labels(G, pos, labels={n:n for n in sub_G.nodes}, font_size=10)
 
     plt.title(f"{label} Traceroute Transit Graph with Edge >={args.threshold} Highlighted")
-    plt.savefig(f'images/{file_prefix}/{label}-traceroute-high-utilized-edge-bound{args.threshold}.png')
+    plt.savefig(f'images/{file_prefix}/{label}_traceroute_high_utilized_edge_bound{args.threshold}.png')
     plt.close()   
 
-def process_current_node_graph(G):
+def process_current_node_graph(G, file_prefix, label):
         node_transit_tuple = [(node, G.nodes[node]['transit']) for node in G.nodes]
         threshold = args.threshold if args.threshold else 0
         high_transit_nodes = [(node, count) for (node, count) in node_transit_tuple if count > threshold]
@@ -153,9 +152,13 @@ def process_current_node_graph(G):
             json_dict[label] = transit_node_with_degrees
 
         elif args.out_format == 'image':
-            process_node_graph(G, high_transit_nodes, f'{args.output_prefix}/{args.target}+{args.mode}+bound+{args.threshold}')
+            process_node_graph(G, high_transit_nodes, file_prefix, label)
+        elif args.out_format == 'xml':
+            output_prefix = args.output_prefix if not args.threshold else args.output_prefix + '-thres' + str(args.threshold)
+            os.makedirs(f'data/graphs/{output_prefix}', exist_ok=True)
+            nx.write_graphml(G, f'data/graphs/{output_prefix}/{label}_trace_node.graphml')
 
-def process_current_edge_graph(G):
+def process_current_edge_graph(G, file_prefix, label):
     edge_weight_tuple = [(edge, G.edges[edge]['weight']) for edge in G.edges()]
     threshold = args.threshold if args.threshold else 0
     high_utilized_edges = [(edge, count) for (edge, count) in edge_weight_tuple if count > threshold]
@@ -164,29 +167,35 @@ def process_current_edge_graph(G):
         json_dict[label] = transit_edge_with_weights
 
     elif args.out_format == 'image':
-        process_edge_graph(G, high_utilized_edges, f'{args.output_prefix}/{args.target}+{args.mode}+bound+{args.threshold}')
+        process_edge_graph(G, high_utilized_edges, file_prefix, label)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, required=True)
     parser.add_argument("--threshold", type=int, default=None)
-    parser.add_argument("--mode", type=str, default="ip") # node frequency or edge frequency
-    parser.add_argument("--out_format", type=str, default="json") # choose whether use json to parse data or output images directly
-    parser.add_argument("--target", type=str, default="node") # check whether we are looking at node (ip / asn) or connection (tuple[ip, ip])
+    parser.add_argument("--mode", type=str, default="ip")
+    parser.add_argument("--out_format", type=str, default="json") # choices: json, image, xml
+    parser.add_argument("--target", type=str, default="node")
     parser.add_argument('--output_prefix', type=str, required=True)
     parser.add_argument('--maxmind_db', type=str, default='data/GeoLite2-ASN.mmdb')
     parser.add_argument('--start_time', type=str, default='xx')
     parser.add_argument('--end_time', type=str, default='xx')
     args = parser.parse_args()
+
+    if args.out_format == 'xml':
+        args.target = 'node' # ensure we onlt need to implement xml save logic in one processing helper function
     
     date_pattern = re.compile(r'(c\d+)\.\d{2}(\d{2})(\d{2})(\d{2})\.warts.gz')
     json_dict = {}
+    output_prefix = f'({args.start_time})2({args.end_time})_{args.output_prefix}/{args.target}-{args.mode}'
+    if args.threshold:
+        output_prefix += '-thres' + str(args.threshold)
 
     prev_label = None
     if args.out_format == 'image':
-        if os.path.exists(f'images/{args.output_prefix}/{args.target}+{args.mode}+bound+{args.threshold}'):
+        if os.path.exists(f'images/{output_prefix}'):
             exit(0)
-        os.makedirs(f'images/{args.output_prefix}/{args.target}+{args.mode}+bound+{args.threshold}')
+        os.makedirs(f'images/{output_prefix}')
     
     with gzip.open(args.input_dir, 'rt', encoding='utf-8') as f:
         for line in tqdm(f):
@@ -209,9 +218,9 @@ if __name__ == '__main__':
 
             elif prev_label != label:
                 if args.target == 'node':
-                    process_current_node_graph(G)
+                    process_current_node_graph(G, output_prefix, prev_label)
                 elif args.target == 'edge':
-                    process_current_edge_graph(G)
+                    process_current_edge_graph(G, output_prefix, prev_label)
                    
                 G.clear()
                 unique_probes.clear()
@@ -244,17 +253,11 @@ if __name__ == '__main__':
         
         if args.end_time == 'xx' or args.end_time > label:
             if args.target == 'node':
-                process_current_node_graph(G)
+                process_current_node_graph(G, output_prefix, label)
             elif args.target == 'edge':
-                process_current_edge_graph(G)
+                process_current_edge_graph(G, output_prefix, label)
 
         if args.out_format == 'json':
-            output_name = f'data/outputs/{args.output_prefix}-traceroute-{args.mode}-for-{args.target}'
-            if args.threshold:
-                output_name += f'-le{args.threshold}'
-            output_name += f'{-args.start_time}' if args.start_time else '-xx'
-            output_name += f'2{args.end_time}' if args.end_time else '2xx'
-            output_name += '.json'
-
+            output_name = f'data/outputs/({args.start_time})2({args.end_time})_{args.output_prefix}_traceroutes_{args.mode}_for_{args.target}.json'
             with open(output_name, 'w') as f:
                 json.dump(json_dict, f, indent=4)

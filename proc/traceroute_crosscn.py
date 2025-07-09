@@ -23,7 +23,6 @@ def extract_iclinks(data : dict[any]) -> list[str]:
     ip_addrs = [ip_addr for ip_addr in ret if not is_private(ip_addr)]
     links = []
 
-    # looking for neighboring paths
     prev_ip, prev_country = None, None
     for idx, ip_addr in enumerate(ip_addrs):
         with mmdb.open_database(args.ipinfo_db) as reader:
@@ -48,6 +47,8 @@ if __name__ == '__main__':
     parser.add_argument("--input_dir", type=str, required=True)
     parser.add_argument('--output_prefix', type=str, required=True)
     parser.add_argument('--ipinfo_db', type=str, default='data/ipinfo_lite.mmdb')
+    parser.add_argument('--start_time', type=str, default='xx')
+    parser.add_argument('--end_time', type=str, default='xx')
     args = parser.parse_args()
     
     date_pattern = re.compile(r'(c\d+)\.\d{2}(\d{2})(\d{2})(\d{2})\.warts.gz')
@@ -61,15 +62,20 @@ if __name__ == '__main__':
             for key, value in partial_dict.items():
                     break 
 
+            re_date = date_pattern.search(key)
+            label = f"{re_date.group(2)}-{re_date.group(3)}-{re_date.group(4)}"
+            if args.start_time != 'xx' and label < args.start_time:
+                continue
+
             value = [inst for inst in value if inst['stop-reason'] == 'completed']
             if len(value) == 0:
                 continue
-            re_date = date_pattern.search(key)
-            label = f"{re_date.group(2)}-{re_date.group(3)}-{re_date.group(4)}"
 
             if prev_label and prev_label != label:
                 json_dict[prev_label] = [{'node': key, 'count': value} for key, value in per_date_dict.items()] 
-                per_date_dict = {}
+                per_date_dict = {} 
+                if args.end_time != 'xx' and args.end_time < label:
+                    break
 
             prev_label = label
 
@@ -79,7 +85,9 @@ if __name__ == '__main__':
                 for link in data:
                     desc = f'{link[0]}->{link[1]}'
                     per_date_dict[desc] = per_date_dict.get(desc, 0) + 1
-
-    output_name = f'data/{args.output_prefix}-traceroute-intercontinental-links.json'
+    if args.end_time == 'xx' or args.end_time > label:
+        json_dict[label] = [{'node': key, 'count': value} for key, value in per_date_dict.items()] 
+ 
+    output_name = f'data/outputs/({args.start_time})2({args.end_time})_{args.output_prefix}_traceroutes_crosscn_links.json'
     with open(output_name, 'w') as f:
         json.dump(json_dict, f, indent=4)
