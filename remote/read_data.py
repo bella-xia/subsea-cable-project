@@ -43,11 +43,11 @@ if __name__ == '__main__':
             print(f"querying capture {inst}")
             graph_data[inst] = p.get_data('trace')
    
-    output_dir = 'data/all-meta-from-' + args.country_spec
+    output_dir = 'data/all_meta_from_' + args.country_spec
     if args.airport_spec:
-        output_dir += '-' + args.airport_spec
+        output_dir += '_' + args.airport_spec
     if args.probe_num_spec:
-        output_dir += '-' + str(args.probe_num_spec)
+        output_dir += '_' + str(args.probe_num_spec)
     output_dir += '.jsonl.gz'
     with gzip.open(output_dir, 'wt', encoding='utf-8') as f:
         for key, value in graph_data.items():
