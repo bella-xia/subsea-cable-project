@@ -8,3 +8,4 @@ seaborn
 geoip2
 maxminddb
 scipy
+streamlit

@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     start_idx = 0
     if args.start_time != 'xx':
-        while graph_data[idx] < args.start_time:
+        while graph_data[start_idx] < args.start_time:
             start_idx += 1
     end_idx = -1
     if args.end_time != 'xx':

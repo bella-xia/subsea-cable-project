@@ -154,9 +154,8 @@ def process_current_node_graph(G, file_prefix, label):
         elif args.out_format == 'image':
             process_node_graph(G, high_transit_nodes, file_prefix, label)
         elif args.out_format == 'xml':
-            output_prefix = args.output_prefix if not args.threshold else args.output_prefix + '-thres' + str(args.threshold)
-            os.makedirs(f'data/graphs/{output_prefix}', exist_ok=True)
-            nx.write_graphml(G, f'data/graphs/{output_prefix}/{label}_trace_node.graphml')
+            os.makedirs(f'data/graphs/{args.output_prefix}', exist_ok=True)
+            nx.write_graphml(G, f'data/graphs/{args.output_prefix}/{label}_trace_node.graphml')
 
 def process_current_edge_graph(G, file_prefix, label):
     edge_weight_tuple = [(edge, G.edges[edge]['weight']) for edge in G.edges()]
@@ -187,7 +186,7 @@ if __name__ == '__main__':
     
     date_pattern = re.compile(r'(c\d+)\.\d{2}(\d{2})(\d{2})(\d{2})\.warts.gz')
     json_dict = {}
-    output_prefix = f'({args.start_time})2({args.end_time})_{args.output_prefix}/{args.target}-{args.mode}'
+    output_prefix = f'{args.output_prefix}/{args.target}-{args.mode}'
     if args.threshold:
         output_prefix += '-thres' + str(args.threshold)
 

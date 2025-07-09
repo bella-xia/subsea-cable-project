@@ -1,0 +1,30 @@
+import streamlit as st
+import os
+from .reusable_comp import render_button
+from utils.constants import ROOT_DIR
+from utils.utils import reset_page
+
+
+def render_graphvis(select_src, select_dst):
+    if not select_src or not select_dst:
+        return
+
+    vp = select_src.split('-')[1]
+    dst = select_dst.split('-')[0]
+    img_dir = f'{ROOT_DIR}/{vp}2{dst}'
+    node_graph_dir, edge_graph_dir = None, None
+    for f in (os.listdir(img_dir) if os.path.exists(img_dir) else []):
+        if os.path.isdir(os.path.join(img_dir, f)) and f.startswith('node'):
+            node_graph_dir = os.path.join(img_dir, f)
+        elif os.path.isdir(os.path.join(img_dir, f)) and f.startswith('edge'):
+            edge_graph_dir = os.path.join(img_dir, f)
+    
+    select_graph = st.segmented_control("graph specs", ("node-based", "edge-based"), selection_mode='single', on_change=reset_page)
+    if select_graph:
+        if (select_graph == 'node-based' and not node_graph_dir) or (select_graph == 'edge-based' and not edge_graph_dir):
+            st.markdown('no data')
+        else:
+            images = sorted([os.path.join(node_graph_dir, img) for img in os.listdir(node_graph_dir if select_graph == 'node-based' else edge_graph_dir)])
+            st.image(images[st.session_state.img_idx])
+            render_button(len(images))
+
