@@ -1,7 +1,7 @@
 import streamlit as st
 from utils.constants import ROOT_DIR
 from utils.utils import reset_page
-import os
+import os, datetime
 
 def render_primary():
     lev1_files = os.listdir(ROOT_DIR)
@@ -13,6 +13,7 @@ def render_primary():
             on_change=reset_page)
 
     select_src, select_dst = None, None
+    select_start, select_end, select_contiguous = None, None, None
     if select_cat:
         lev2_files = [f for f in lev1_files if (f != 'crosscn-asns' and f != 'classification')]
         src_set, dst_set = set(), set()
@@ -29,9 +30,13 @@ def render_primary():
         select_dst = st.selectbox(
                 'probe destination', tuple(dst_set), index=None,
                 placeholder='select a destination', on_change=reset_page) if dst_set else None
+    
+        if select_cat not in ['Cross-Country ASNs', 'IP Hop Connectivity Graph']:
+            select_start = st.date_input('statistics start time', datetime.date(2024, 1, 30))
+            select_end = st.date_input('statistics end time', datetime.date(2024, 3, 30))
+            select_contiguous = st.checkbox('contiguous dates')
 
-
-    return select_cat, select_src, select_dst
+    return select_cat, select_src, select_dst, select_start, select_end, select_contiguous
 
 
 

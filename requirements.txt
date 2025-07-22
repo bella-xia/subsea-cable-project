@@ -9,3 +9,4 @@ geoip2
 maxminddb
 scipy
 streamlit
+mmdb_writer

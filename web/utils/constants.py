@@ -6,8 +6,11 @@ CLASSIFICATION_SUBDIR = 'classification'
 
 DATA_ROOT_DIR = 'data'
 ISO_DB = 'iso-3166-countries-with-regional-codes.csv'
-
-
+SRC2DST_RAW = 'probe-filter'
+SRC2DST_JSON = 'outputs'
+SRC2DST_GRAPH = 'graphs'
+SRC2DST_PRELIM = 'prelim'
+SRC2ALL_CROSSCN = 'crosscn'
 STATS_SUBFIX = {
         'Cross-country IP Link Density': '_ip_contiguous_threshold_40_crosscn_edge_heatmap.png',
         'IP Link Density': '_ip_contiguous_threshold_40_edge_heatmap.png',

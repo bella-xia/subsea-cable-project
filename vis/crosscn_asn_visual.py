@@ -1,7 +1,56 @@
 import os, argparse, json
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from utils.date_processing import generate_date_sequence
+from .utils.date_processing import generate_date_sequence
+
+def crosscn_asn_processor(input_dir, time_spec, key_spec,
+                          pri_cspec='tab20', sup_cspec='viridis', num_sup=20):
+    pri_cmap = plt.get_cmap(pri_cspec)
+    sup_cmap = plt.get_cmap(sup_cspec).resampled(num_sup)
+ 
+    with open(input_dir, 'r') as f:
+        j = json.load(f)
+        data = j.get(key_spec, {})
+        asn_list = j.get('sorted-asn', [])
+
+    if len(data) == 0 or len(asn_list) == 0:
+        return None
+
+    bar_data = data.get(time_spec, {})
+    count_data = bar_data.get('counter', {})
+    if len(bar_data) == 0 or len(count_data) == 0:
+        return None
+
+    asn2color = {asn : pri_cmap(idx) if idx < 20 else sup_cmap(idx - 20) for idx, asn in enumerate(asn_list[:20 + num_sup - 1])}
+    asn2color['other'] = sup_cmap(19)
+    fig, axes = plt.subplots(2, 1, figsize=(15, 10))
+
+    # bar chart on the number of packets probed to each destination cn
+    sorted_count_data = dict(sorted(count_data.items(), key=lambda x : x[0]))
+    bars = axes[0].bar(sorted_count_data.keys(), sorted_count_data.values())
+    for bar in bars:
+        height = bar.get_height()
+        axes[0].text(bar.get_x() + bar.get_width() / 2, height + 50, f'{int(height)}', ha='center', va='bottom')
+    axes[0].set_xlabel('country probed')
+    axes[0].set_ylabel('probes completed')
+    axes[0].set_title(time_spec)
+
+    # bar chart on the ratio distribution of asns
+    cns = sorted_count_data.keys()
+    bottom = [0.0] * len(cns)
+    for asn in asn2color.keys():
+        ratios = [float(bar_data[cn].get(asn, 0)) / sorted_count_data[cn] for cn in cns]
+        if sum(ratios) > 0:
+            axes[1].bar(cns, ratios, bottom=bottom, label='\n->'.join(asn.split('->')), color=asn2color[asn])
+            bottom = [b + v for b, v in zip(bottom, ratios)]
+    axes[1].bar(cns, [1.0 - b for b in bottom], bottom=bottom, label='other', color=asn2color['other']) 
+    axes[1].legend(title='asn', loc='center left', bbox_to_anchor=(1.01, 0.5), borderaxespad=0, frameon=False) 
+    axes[1].set_xlabel('country probed')
+    axes[1].set_ylabel('ASN proportion in inter-country path')
+    axes[1].set_title(f'Inter-Country Link ASN distribution')
+    plt.tight_layout()
+    plt.close(fig)
+    return fig
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -19,19 +68,6 @@ if __name__ == '__main__':
     parser.add_argument('--front_as', action='store_true')
 
     args = parser.parse_args()
-    with open(args.input_dir, 'r') as f:
-       data = json.load(f)
-    if not args.vp:
-        cns = set(data.keys())
-        print(f'available vantage points: {cns}')
-        exit(0)
-    if not args.airport:
-        # give all available airports
-        airports = set([inst.split('(')[0] for inst in data[args.vp].keys()])
-        print('available airports:', airports)
-        exit(0)
-    vp_lab = ''.join(args.vp.lower().split())
-    os.makedirs(f'images/{vp_lab}-intercountry-asn/{args.airport}-{args.label}-{"" if not args.front_as else "front-as"}', exist_ok=True)
     pri_cmap = plt.get_cmap(args.primary_cmap)
     sup_cmap = plt.get_cmap(args.supple_cmap).resampled(args.supple_color)
     cmap_idx = 0

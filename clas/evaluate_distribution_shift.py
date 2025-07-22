@@ -23,17 +23,11 @@ def get_divergence(d1, d2, epsilon=1e-10):
 
     return kl_div, js_div
 
-if __name__ == '__main__':
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input_prefix', type=str, required=True)
-    parser.add_argument('--top_k', type=int, default=50)
-    parser.add_argument('--top_r', type=int, default=80) # top 20% of traffic
-    parser.add_argument('--mode', type=str, default='top_r')
-    args = parser.parse_args()
 
-    node_path = args.input_prefix + '_for_node.json'
-    edge_path = args.input_prefix + '_for_edge.json'
+def jskl_div_processor(input_prefix, mode='top_r', top_k=40, top_r=40): 
+
+    node_path = input_prefix + '_node.json'
+    edge_path = input_prefix + '_edge.json'
     
     assert(os.path.exists(node_path) and os.path.exists(edge_path))
 
@@ -54,11 +48,10 @@ if __name__ == '__main__':
         if prev_node and prev_edge:
             keys.append(date)
         
-        # Node data
         stats_per_day = node_data[date]
         sorted_stats_per_day = sorted(stats_per_day, key=lambda x : x['count'], reverse=True)
-        if args.mode == 'top_k':
-            curr_node = {item['node']: item['count'] for item in sorted_stats_per_day[:args.top_k]}
+        if mode == 'top_k':
+            curr_node = {item['node']: item['count'] for item in sorted_stats_per_day[:top_k]}
         else:
             curr_node = {}
             total_traffic = sum(item['count'] for item in sorted_stats_per_day)
@@ -66,7 +59,7 @@ if __name__ == '__main__':
             for item in sorted_stats_per_day:
                 curr_node[item['node']] = item['count']
                 accum_dist += item['count']
-                if accum_dist > total_traffic * args.top_r:
+                if accum_dist > total_traffic * top_r:
                     break
         if prev_node:
             kl_div, js_div = get_divergence(prev_node, curr_node)
@@ -74,11 +67,10 @@ if __name__ == '__main__':
             node_kl.append(kl_div)
         prev_node = curr_node
 
-        # Edge data
         stats_per_day = edge_data[date]
         sorted_stats_per_day = sorted(stats_per_day, key=lambda x : x['count'], reverse=True)
-        if args.mode == 'top_k':
-            curr_edge = {item['node']: item['count'] for item in sorted_stats_per_day[:args.top_k]}
+        if mode == 'top_k':
+            curr_edge = {item['node']: item['count'] for item in sorted_stats_per_day[:top_k]}
         else:
             curr_edge = {}
             total_traffic = sum(item['count'] for item in sorted_stats_per_day)
@@ -86,7 +78,7 @@ if __name__ == '__main__':
             for item in sorted_stats_per_day:
                 curr_edge[item['node']] = item['count']
                 accum_dist += item['count']
-                if accum_dist > total_traffic * args.top_r:
+                if accum_dist > total_traffic * top_r:
                     break
         if prev_edge:
             kl_div, js_div = get_divergence(prev_edge, curr_edge)
@@ -95,7 +87,7 @@ if __name__ == '__main__':
         prev_edge = curr_edge
 
     
-    filter_spec = f'(top {args.top_k})' if args.mode == 'top_k' else f'(top {args.top_r}%)'
+    filter_spec = f'(top {top_k})' if mode == 'top_k' else f'(top {top_r}%)'
 
     fig, (ax11, ax21) = plt.subplots(2, 1, sharex=True, figsize=(20, 10))
     color = 'tab:red'
@@ -123,5 +115,16 @@ if __name__ == '__main__':
     ax22.tick_params(axis='y', labelcolor=color)
 
     fig.tight_layout()
-    plt.savefig(f'images/classification/{args.input_prefix.split(")_")[-1]}_dist_divergence.png')
+    plt.close(fig)
+    return fig
+
+if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_prefix', type=str, required=True)
+    parser.add_argument('--top_k', type=int, default=50)
+    parser.add_argument('--top_r', type=int, default=80) # top 20% of traffic
+    parser.add_argument('--mode', type=str, default='top_r')
+    args = parser.parse_args()
+
 

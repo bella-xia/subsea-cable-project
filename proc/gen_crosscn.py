@@ -47,13 +47,10 @@ if __name__ == '__main__':
     parser.add_argument("--input_dir", type=str, required=True)
     parser.add_argument('--output_prefix', type=str, required=True)
     parser.add_argument('--ipinfo_db', type=str, default='data/ipinfo_lite.mmdb')
-    parser.add_argument('--start_time', type=str, default='xx')
-    parser.add_argument('--end_time', type=str, default='xx')
     args = parser.parse_args()
     
     date_pattern = re.compile(r'(c\d+)\.\d{2}(\d{2})(\d{2})(\d{2})\.warts.gz')
     json_dict, per_date_dict = {}, {}
-
     prev_label = None
     
     with gzip.open(args.input_dir, 'rt', encoding='utf-8') as f:
@@ -64,9 +61,6 @@ if __name__ == '__main__':
 
             re_date = date_pattern.search(key)
             label = f"{re_date.group(2)}-{re_date.group(3)}-{re_date.group(4)}"
-            if args.start_time != 'xx' and label < args.start_time:
-                continue
-
             value = [inst for inst in value if inst['stop-reason'] == 'completed']
             if len(value) == 0:
                 continue
@@ -74,8 +68,6 @@ if __name__ == '__main__':
             if prev_label and prev_label != label:
                 json_dict[prev_label] = [{'node': key, 'count': value} for key, value in per_date_dict.items()] 
                 per_date_dict = {} 
-                if args.end_time != 'xx' and args.end_time < label:
-                    break
 
             prev_label = label
 
@@ -85,9 +77,7 @@ if __name__ == '__main__':
                 for link in data:
                     desc = f'{link[0]}->{link[1]}'
                     per_date_dict[desc] = per_date_dict.get(desc, 0) + 1
-    if args.end_time == 'xx' or args.end_time > label:
-        json_dict[label] = [{'node': key, 'count': value} for key, value in per_date_dict.items()] 
- 
-    output_name = f'data/outputs/({args.start_time})2({args.end_time})_{args.output_prefix}_traceroutes_crosscn_links.json'
+    json_dict[label] = [{'node': key, 'count': value} for key, value in per_date_dict.items()] 
+    output_name = f'data/outputs/{args.output_prefix}_crosscn_edge.json'
     with open(output_name, 'w') as f:
         json.dump(json_dict, f, indent=4)
