@@ -1,0 +1,5 @@
+numpy
+pandas
+tqdm
+maxminddb
+mmdb_writer
