@@ -1,10 +1,11 @@
 import streamlit as st
-from utils.constants import ROOT_DIR
+from utils.constants import DATA_ROOT_DIR, META_DIR
 from utils.utils import reset_page
 import os, datetime
 
-def render_primary():
-    lev1_files = os.listdir(ROOT_DIR)
+def render_primary_realtime():
+    cns = [f.split('.')[0].split('_')[-1] for f in os.listdir(f'{DATA_ROOT_DIR}/{META_DIR}')]
+    names = [st.session_state.iso2cn.get(cn, 'unknown') + f'-{cn}' for cn in cns]
     select_cat = st.selectbox(
             'statistics category',
             ('Preliminary data', 'Cross-Country ASNs', 'IP Utilization Heatmap', 'IP Hop Connectivity Graph', 'IP Traceroute Changes Classification Method'),
@@ -14,29 +15,23 @@ def render_primary():
 
     select_src, select_dst = None, None
     select_start, select_end, select_contiguous = None, None, None
-    if select_cat:
-        lev2_files = [f for f in lev1_files if (f != 'crosscn-asns' and f != 'classification')]
-        src_set, dst_set = set(), set()
-        for f in lev2_files:
-            f_arr = f.split('2')
-            if st.session_state.iso2cn.get(f_arr[0], None):
-                src_set.add(f"{st.session_state.iso2cn[f_arr[0]]}-{f_arr[0]}")
-            if st.session_state.cn2iso.get(f_arr[1], None):
-                dst_set.add(f"{f_arr[1]}-{st.session_state.cn2iso[f_arr[1]]}")
-
+    if select_cat and len(names) > 0:
         select_src = st.selectbox(
-                'vantage point', tuple(src_set), index=None,
-                placeholder='select a vantage point', on_change=reset_page) if src_set else None
+                'vantage point', tuple(names), index=None,
+                placeholder='select a vantage point', on_change=reset_page)
         select_dst = st.selectbox(
-                'probe destination', tuple(dst_set), index=None,
-                placeholder='select a destination', on_change=reset_page) if dst_set else None
+                'probe destination', tuple(names), index=None,
+                placeholder='select a destination', on_change=reset_page)
     
         if select_cat not in ['Cross-Country ASNs', 'IP Hop Connectivity Graph']:
             select_start = st.date_input('statistics start time', datetime.date(2024, 1, 30))
             select_end = st.date_input('statistics end time', datetime.date(2024, 3, 30))
-            select_contiguous = st.checkbox('contiguous dates')
+            if select_cat != 'IP Traceroute Changes Classification Method':
+                select_contiguous = st.checkbox('contiguous dates')
 
     return select_cat, select_src, select_dst, select_start, select_end, select_contiguous
+
+
 
 
 

@@ -25,6 +25,7 @@ if __name__ == '__main__':
         city_data = reader.get(args.ip)
         geolite_city_name = city_data['city']['names']['en'] if city_data.get('city', None) else 'unknown'
         geolite_country_name = city_data['country']['names']['en'] if city_data.get('country', None) else 'unknown'
+        print(city_data['country'])
         geolite_continent_name = city_data['continent']['names']['en'] if city_data.get('continent', None) else 'unknown'
         geolite_subdivision_name = ', '.join(inst['names']['en'] for inst in city_data['subdivisions']) if city_data.get('subdivisions', None) else 'unknown'
         geolite_latitude = city_data['location']['latitude'] if city_data.get('location', None) else 'unknown'

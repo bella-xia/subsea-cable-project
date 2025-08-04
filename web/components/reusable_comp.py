@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from utils.utils import prev_page, next_page
 
@@ -11,3 +12,9 @@ def render_button(total_len):
             if st.session_state.img_idx < total_len - 1:
                 st.button("Next Image", on_click=next_page)
 
+
+def savefig_button(fig, path_dir, img_name):
+    os.makedirs(f'images/{path_dir}', exist_ok=True)
+    path = f'images/{path_dir}/{img_name}'
+    if st.button('SAVE FIGURE'):
+        fig.savefig(path)
