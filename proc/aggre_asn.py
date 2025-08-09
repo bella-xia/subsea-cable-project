@@ -34,7 +34,6 @@ def ipinfo_geoloc_w_asn(data, geo_reader, asn_reader):
         if not asn or not country:
             continue
         if prev_country and country != prev_country:
-            # cross country subsea cable
             if prev_asn == 'unknown' and asn == 'unknown':
                 prev_country = country
                 prev_asn = asn
@@ -66,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('--ipinfo_db', type=str, default='data/ipinfo_lite.mmdb')
     parser.add_argument('--maxmind_geodb', type=str, default='data/GeoLite2-Country.mmdb')
     parser.add_argument('--maxmind_asndb', type=str, default='data/GeoLite2-ASN.mmdb')
-    parser.add_argument('--mode', type=str, default='maxmind') 
+    parser.add_argument('--mode', type=str, default='ipinfo') 
     parser.add_argument('--worker', type=int, default=4)
     args = parser.parse_args()
     

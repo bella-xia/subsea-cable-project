@@ -5,10 +5,10 @@ CLASSIFICATION_SUBDIR = 'classification'
 
 
 DATA_ROOT_DIR = 'data'
-STATS_ROOT_DIR = 'redsea'
+STATS_ROOT_DIR = 'north-europe-meta'
 #'redsea-stats'
 ISO_DB = 'iso-3166-countries-with-regional-codes.csv'
-META_DIR = 'meta'
+META_DIR = 'north-europe-meta'
 # 'meta'
 SRC2DST_RAW = 'probe-filter'
 SRC2DST_JSON = 'outputs'

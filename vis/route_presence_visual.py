@@ -9,19 +9,11 @@ def format_ip(ip_addr : str) -> tuple[int]:
     ip_addr = '.'.join(ip_addr.split('->'))
     return tuple(map(int, ip_addr.split('.')))
  
-def heatmap_image_processor(input_dir, start_time, end_time, 
+def heatmap_image_processor(data, start_time, end_time, 
                     threshold=40, mode='both', contiguous_flag=False):
-    with open(input_dir, 'r') as f:
-        data = json.load(f)
     
     dates = data.keys()
     dates = list(sorted(dates))
-    if start_time != 'xx':
-        while dates[0] < start_time:
-            dates = dates[1:]
-    if end_time != 'xx':
-        while dates[-1] > end_time:
-            dates = dates[:-1]
     formatted_data = []
     for day in dates:
         for inst in data[day]:

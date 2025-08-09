@@ -4,7 +4,7 @@ from utils.utils import reset_page
 import os, datetime
 
 def render_primary_realtime():
-    cns = [f.split('.')[0].split('_')[-1] for f in os.listdir(f'{DATA_ROOT_DIR}/{META_DIR}')]
+    cns = [f.split('.')[0].split('-')[-1] for f in os.listdir(f'{DATA_ROOT_DIR}/{META_DIR}')]
     names = [st.session_state.iso2cn.get(cn, 'unknown') + f'-{cn}' for cn in cns]
     select_cat = st.selectbox(
             'statistics category',
@@ -24,16 +24,9 @@ def render_primary_realtime():
                 placeholder='select a destination', on_change=reset_page)
     
         if select_cat not in ['Cross-Country ASNs', 'IP Hop Connectivity Graph']:
-            select_start = st.date_input('statistics start time', datetime.date(2024, 1, 30))
-            select_end = st.date_input('statistics end time', datetime.date(2024, 3, 30))
+            select_start = st.date_input('statistics start time', datetime.date(2024, 11, 1))
+            select_end = st.date_input('statistics end time', datetime.date(2024, 12, 31))
             if select_cat != 'IP Traceroute Changes Classification Method':
                 select_contiguous = st.checkbox('contiguous dates')
 
     return select_cat, select_src, select_dst, select_start, select_end, select_contiguous
-
-
-
-
-
-
-

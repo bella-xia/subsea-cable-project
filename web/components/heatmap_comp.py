@@ -1,6 +1,7 @@
 import streamlit as st
 from utils.utils import extract_stats_images
 from utils.constants import STATS_ROOT_DIR, SRC2DST_JSON
+from utils.time_processor import aggre_avail_data
 import os, datetime
 from .reusable_comp import savefig_button
 
@@ -14,26 +15,25 @@ def render_heatmap_realtime(select_src, select_dst, select_start, select_end, se
     select_spec = st.segmented_control("heatmap type", ("Presence", "Density"), selection_mode='single')
     if not select_type or not select_spec:
         return
-    prefix = f'{vp}2{dst}'
+    suffix = f'{vp}2{dst}'
     if select_type == 'Cross-country IP Link':
-        prefix += '_crosscn_edge'
+        suffix += '_crosscn_edge'
+    elif select_type == 'IP Link':
+        suffix += '_edge'
     else:
-        if select_type == 'IP Link':
-            prefix += '_edge'
-        else:
-            prefix += '_node'
-    ref = None
-    for data in os.listdir(json_dir):
-        if data.startswith(prefix):
-            ref = data
+        suffix += '_node'
 
-    if not ref:
+    suffix += '.json'
+    print(json_dir, suffix)
+    data = aggre_avail_data(json_dir, suffix,select_start, select_end)
+
+    if len(data) == 0:
         st.write(f'unable to find data for {select_type}, {select_spec} for {vp}2{dst} in {json_dir}')
     else:
         start_time = select_start.strftime('%y-%m-%d')
         end_time = select_end.strftime('%y-%m-%d')
         contiguous_flag = True if select_contiguous else False
-        fig1, _ = processor(os.path.join(json_dir, ref), start_time, end_time,
+        fig1, _ = processor(data, start_time, end_time,
             contiguous_flag = contiguous_flag, mode=select_spec.lower())
         start_str = select_start.strftime('%m-%d')
         end_str = select_end.strftime('%m-%d')

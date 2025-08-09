@@ -151,7 +151,6 @@ if __name__ == '__main__':
                 except Exception as e:
                     print(f'receiving exception when running step 4: {str(e)}')
                     exit(-1)
-
                    
             # step 5: generate traceroute graph json on IP and IP link
             if os.path.exists(TRACEROUTE_GRAPH_NODE_DIR):
@@ -259,4 +258,3 @@ if __name__ == '__main__':
                     print(f'receiving exception when running step 6: {str(e)}')
                     exit(-1)
  
-
